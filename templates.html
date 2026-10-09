@@ -1,0 +1,170 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.}}</title>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body><main>
+{{end}}
+
+{{define "foot"}}</main></body></html>{{end}}
+
+{{define "err"}}<p class="err" role="alert">{{.}}</p>{{end}}
+
+{{/* ================= user side ================= */}}
+
+{{define "home"}}{{template "head" "Reading group polls"}}
+<h1><a href="/">HiPCASTOR Reading Group</a></h1>
+<p class="sub">Vote here on what papers we can read/review next.</p>
+<div class="card">
+  {{if .}}
+  <ul class="polls">
+    {{range .}}
+    <li><a href="/polls/{{.ID}}">{{.Question}}</a>
+      <span class="muted nowrap">{{.Votes}} vote{{if ne .Votes 1}}s{{end}}{{if .Closed}} &middot; closed{{end}}</span></li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted">No polls yet. Check back soon.</p>{{end}}
+</div>
+<h2>What have we read?</h2>
+<ul>
+  <li>Nothing yet</li>
+</ul>
+<p class="muted link"><a href="/admin">Admin</a></p>
+{{template "foot"}}{{end}}
+
+{{define "panel"}}<section id="panel"{{if .OOB}} hx-swap-oob="true"{{end}} hx-get="{{.PanelURL}}" hx-trigger="every 5s" hx-swap="outerHTML">
+  <p>
+    {{if .Closed}}<span class="badge">closed</span>{{else}}<span class="badge">open</span>{{end}}
+    <span class="muted">{{.Total}} vote{{if ne .Total 1}}s{{end}}{{if not (or .Closed .ReadOnly)}} &middot; click again to change yours{{end}}</span>
+  </p>
+  {{range .Options}}
+  <div class="opt{{if .Mine}} mine{{end}}">
+    <div class="bar" style="width:{{.Pct}}%"></div>
+    {{if or $.Closed $.ReadOnly}}
+    <div class="inner"><span>{{.Label}}{{if .Mine}} &#10003;{{end}}</span><span class="n">{{.Votes}} &middot; {{.Pct}}%</span></div>
+    {{else}}
+    <form hx-post="/polls/{{$.ID}}/vote" hx-target="#panel" hx-swap="outerHTML">
+      <input type="hidden" name="option_id" value="{{.ID}}">
+      <button class="inner" type="submit"><span>{{.Label}}{{if .Mine}} &#10003;{{end}}</span><span class="n">{{.Votes}} &middot; {{.Pct}}%</span></button>
+    </form>
+    {{end}}
+  </div>
+  {{end}}
+</section>{{end}}
+
+{{define "suggest_form"}}<form id="suggest" class="row" hx-post="/polls/{{.ID}}/options" hx-target="#suggest" hx-swap="outerHTML">
+  <input type="text" name="label" maxlength="120" placeholder="Suggest another option" required>
+  <button type="submit">Add</button>
+</form>{{end}}
+
+{{define "suggest_response"}}{{template "suggest_form" .}}
+{{template "panel" .}}{{end}}
+
+{{define "poll"}}{{template "head" .Question}}
+<h1><a href="/">Reading group polls</a></h1>
+<p class="sub">{{.Question}}</p>
+<div class="card">
+  {{template "panel" .}}
+</div>
+{{if and .AllowSuggest (not .Closed)}}<div class="card">{{template "suggest_form" .}}</div>{{end}}
+<p class="muted link"><a href="/">&larr; all polls</a></p>
+{{template "foot"}}{{end}}
+
+{{/* ================= admin side ================= */}}
+
+{{define "admin_login"}}{{template "head" "Admin login"}}
+<h1><a href="/">Reading group polls</a></h1>
+<p class="sub">Admin</p>
+<form class="card" method="post" action="/admin/login">
+  <label for="password">Password</label>
+  <input type="password" id="password" name="password" autocomplete="current-password" autofocus required>
+  {{if .}}<p class="err" role="alert">{{.}}</p>{{end}}
+  <p><button type="submit">Sign in</button></p>
+</form>
+{{template "foot"}}{{end}}
+
+{{define "admin_nav"}}<h1><a href="/admin">Admin</a>
+  <span class="link"><a href="/">View site</a> &middot;
+    <form method="post" action="/admin/logout" style="display:inline"><button type="submit">Sign out</button></form></span>
+</h1>{{end}}
+
+{{define "admin_home"}}{{template "head" "Admin"}}
+{{template "admin_nav"}}
+<p class="sub">Create and manage polls.</p>
+
+<form class="card" hx-post="/admin/polls" hx-target="#err" hx-swap="innerHTML">
+  <h2>New poll</h2>
+  <label for="question">Question</label>
+  <input type="text" id="question" name="question" maxlength="200" placeholder="What should we read next?" required>
+  <label for="options">Options <span class="muted">(One per line, 2 to 12)</span></label>
+  <textarea id="options" name="options" rows="5" placeholder="Pond https://dl.acm.org/doi/abs/10.1145/3575693.3578835&#10;Camp https://dl.acm.org/doi/10.1145/3779212.3790201" required></textarea>
+  <label class="check"><input type="checkbox" name="allow_suggest" value="1" checked> Let members suggest more options</label>
+  <div id="err"></div>
+  <p><button type="submit">Create poll</button></p>
+</form>
+
+<div class="card">
+  <h2>All polls</h2>
+  {{if .}}
+  <ul class="polls">
+    {{range .}}
+    <li><a href="/admin/polls/{{.ID}}">{{.Question}}</a>
+      <span class="muted nowrap">{{.Votes}} vote{{if ne .Votes 1}}s{{end}}{{if .Closed}} &middot; closed{{end}}</span></li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted">No polls yet.</p>{{end}}
+</div>
+{{template "foot"}}{{end}}
+
+{{define "admin_body"}}<div id="adminbody">
+<div class="card">
+  {{template "panel" .}}
+</div>
+
+<div class="card">
+  <h2>Manage</h2>
+  <div class="btns">
+    {{if .Closed}}
+    <form hx-post="/admin/polls/{{.ID}}/reopen" hx-target="#adminbody" hx-swap="outerHTML"><button type="submit">Reopen voting</button></form>
+    {{else}}
+    <form hx-post="/admin/polls/{{.ID}}/close" hx-target="#adminbody" hx-swap="outerHTML" hx-confirm="Close this poll? Voting will stop."><button type="submit">Close voting</button></form>
+    {{end}}
+    <form hx-post="/admin/polls/{{.ID}}/suggestions" hx-target="#adminbody" hx-swap="outerHTML">
+      <button class="ghost" type="submit">{{if .AllowSuggest}}Turn off member suggestions{{else}}Turn on member suggestions{{end}}</button>
+    </form>
+  </div>
+
+  <label>Options</label>
+  {{range .Options}}
+  <div class="optrow">
+    <span>{{.Label}} <span class="muted">({{.Votes}})</span></span>
+    <form hx-post="/admin/polls/{{$.ID}}/options/{{.ID}}/delete" hx-target="#adminbody" hx-swap="outerHTML"
+          hx-confirm="Remove this option and its votes?">
+      <button class="danger small" type="submit">Remove</button>
+    </form>
+  </div>
+  {{end}}
+  <form class="row" style="margin-top:12px" hx-post="/admin/polls/{{.ID}}/options" hx-target="#adminbody" hx-swap="outerHTML">
+    <input type="text" name="label" maxlength="120" placeholder="Add an option" required>
+    <button type="submit">Add</button>
+  </form>
+</div>
+
+<div class="card">
+  <p class="muted">Share this link with the group: <a href="/polls/{{.ID}}">/polls/{{.ID}}</a></p>
+  <form hx-post="/admin/polls/{{.ID}}/delete" hx-swap="none" hx-confirm="Delete this poll and all its votes? This cannot be undone.">
+    <button class="danger" type="submit">Delete poll</button>
+  </form>
+</div>
+</div>{{end}}
+
+{{define "admin_poll"}}{{template "head" .Question}}
+{{template "admin_nav"}}
+<p class="sub">{{.Question}}</p>
+{{template "admin_body" .}}
+<p class="muted link"><a href="/admin">&larr; all polls</a></p>
+{{template "foot"}}{{end}}
