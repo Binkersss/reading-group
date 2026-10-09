@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+name="reading-group"
+description="Reading Group Polls"
+supervisor="supervise-daemon"
+
+command="/opt/reading-group/reading-group"
+command_user="readinggroup:readinggroup"
+directory="/opt/reading-group"
+
+output_log="/var/log/reading-group.log"
+error_log="/var/log/reading-group.err"
+
+depend() {
+    need net
+    after firewall
+}
