@@ -6,11 +6,16 @@ name: Go
 on:
   push:
     branches: [ "master" ]
+    tags:
+      - 'v*' # Triggers when pushing tags that start with 'v' (e.g., v1.0.0)
   pull_request:
     branches: [ "master" ]
 
-jobs:
+# Grants the GITHUB_TOKEN permission to create releases
+permissions:
+  contents: write
 
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +27,14 @@ jobs:
         go-version: '1.27.1'
 
     - name: Build
-      run: go build -v ./...
+      run: go build -v -o reading-group ./...
 
     - name: Test
       run: go test -v ./...
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        generate_release_notes: true
+        files: reading-group
