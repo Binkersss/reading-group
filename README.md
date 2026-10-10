@@ -16,7 +16,7 @@ chmod 770 /opt/reading-group/data
 Fetch the binary from Github:
 
 `````
-wget https://github.com/Binkersss/reading-group/releases/download/v0.0.1/reading-group \
+wget https://github.com/Binkersss/reading-group/releases/download/v0.0.3/reading-group \
     -O /opt/reading-group/reading-group
 chown readinggroup:readinggroup /opt/reading-group/reading-group
 chmod 750 /opt/reading-group/reading-group
